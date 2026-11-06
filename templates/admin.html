@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Админ-панель — IThubBoard</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .admin-container { max-width: 1000px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .admin-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        .admin-table th, .admin-table td { padding: 12px; border-bottom: 1px solid #eee; text-align: left; }
+        .admin-table th { background: #f8f9fa; }
+        .btn-danger { background: #ff7675; color: white; border: none; padding: 6px 12px; border-radius: 4px; cursor: pointer; }
+        .btn-danger:hover { background: #d63031; }
+        .deleted-row { opacity: 0.5; background: #ffeaea; text-decoration: line-through; }
+        
+        /* Модальное окно */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 400px; max-width: 90%; }
+        .modal-content input { width: 100%; padding: 10px; margin: 15px 0; border: 1px solid #ccc; border-radius: 5px; }
+        .modal-actions { display: flex; justify-content: space-between; }
+        
+        /* Вкладки */
+        .tab-btn { background: #b2bec3; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; font-weight: bold; transition: background 0.3s; }
+        .tab-btn.active { background: #6c5ce7; }
+    </style>
+</head>
+<body>
+    <div class="admin-container">
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h1>⚙️ Панель администратора</h1>
+            <a href="/" style="color: #6c5ce7; text-decoration: none; font-weight: bold;">← На главную</a>
+        </div>
+
+        {% if not is_auth %}
+            <!-- Форма входа -->
+            <div style="text-align: center; margin-top: 50px;">
+                <h2>Введите пароль</h2>
+                {% if error %}<p style="color: red; margin-top: 10px;">{{ error }}</p>{% endif %}
+                <form method="POST" style="margin-top: 20px;">
+                    <input type="password" name="password" placeholder="Секретный пароль" style="padding: 10px; font-size: 1.2rem; border-radius: 8px; border: 1px solid #ccc; width: 300px;" required>
+                    <button type="submit" class="btn" style="margin-top: 10px;">Войти</button>
+                </form>
+                <p style="color: #888; margin-top: 20px; font-size: 0.9rem;">(Пароль по умолчанию: admin123)</p>
+            </div>
+        {% else %}
+            <!-- Шапка админки -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; margin-top: 20px;">
+                <p>Вы вошли как <b>Администратор</b></p>
+                <a href="/admin/logout" style="color: #ff7675; text-decoration: none; font-weight: bold;">Выйти</a>
+            </div>
+
+            <!-- Вкладки -->
+            <div style="display: flex; gap: 10px; margin-bottom: 20px;">
+                <button onclick="showTab('ads')" id="tab-ads" class="tab-btn active">Объявления</button>
+                <button onclick="showTab('reviews')" id="tab-reviews" class="tab-btn">Отзывы ({{ feedbacks|length }})</button>
+            </div>
+            
+            <!-- Вкладка Объявления -->
+            <div id="content-ads">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Заголовок</th>
+                            <th>Статус</th>
+                            <th>Действие</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for a in announcements %}
+                        <tr class="{% if a.is_deleted %}deleted-row{% endif %}">
+                            <td>{{ a.id }}</td>
+                            <td>{{ a.title }}</td>
+                            <td>
+                                {% if a.is_deleted %}
+                                    Удалено (Причина: {{ a.delete_reason }})
+                                {% else %}
+                                    Активно
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if not a.is_deleted %}
+                                    <button class="btn-danger" 
+                                            data-id="{{ a.id }}" 
+                                            data-title="{{ a.title }}" 
+                                            onclick="openDeleteModal(this)">
+                                        Удалить
+                                    </button>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Вкладка Отзывы -->
+            <div id="content-reviews" style="display: none;">
+                {% if feedbacks %}
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Дата</th>
+                                <th>Оценка (NPS)</th>
+                                <th>Комментарий</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for f in feedbacks %}
+                            <tr>
+                                <td>{{ f.created_at[:16] }}</td>
+                                    <td>
+                                        <b class="score-display" data-score="{{ f.score }}">
+                                            {{ f.score }} / 10
+                                        </b>
+                                    </td>
+                                <td>{{ f.comment or 'Без комментария' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                {% else %}
+                    <div style="text-align: center; padding: 40px; background: #f8f9fa; border-radius: 12px;">
+                        <p style="color: #888;">Пока нет отзывов от пользователей.</p>
+                    </div>
+                {% endif %}
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Модальное окно удаления -->
+    <div id="deleteModal" class="modal">
+        <div class="modal-content">
+            <h3>Удаление объявления</h3>
+            <p id="modalTitle" style="color: #888; margin-top: 5px; font-size: 0.9rem;"></p>
+            <form id="deleteForm" method="POST" action="">
+                <label>Укажите причину удаления:</label>
+                <input type="text" name="reason" placeholder="Например: Спам, оскорбления" required>
+                <div class="modal-actions">
+                    <button type="button" onclick="closeModal()" style="padding: 8px 15px; border-radius: 5px; border: 1px solid #ccc; background: white; cursor: pointer;">Отмена</button>
+                    <button type="submit" class="btn-danger">Удалить</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Логика переключения вкладок
+        function showTab(tab) {
+            document.getElementById('content-ads').style.display = tab === 'ads' ? 'block' : 'none';
+            document.getElementById('content-reviews').style.display = tab === 'reviews' ? 'block' : 'none';
+            
+            document.getElementById('tab-ads').classList.toggle('active', tab === 'ads');
+            document.getElementById('tab-reviews').classList.toggle('active', tab === 'reviews');
+        }
+
+        // Логика модального окна удаления
+        function openDeleteModal(button) {
+            const id = button.getAttribute('data-id');
+            const title = button.getAttribute('data-title');
+            
+            document.getElementById('deleteModal').style.display = 'flex';
+            document.getElementById('modalTitle').innerText = 'Объявление: ' + title;
+            document.getElementById('deleteForm').action = '/admin/delete/' + id;
+        }
+
+        function closeModal() {
+            document.getElementById('deleteModal').style.display = 'none';
+        }
+
+                // Раскрашиваем оценки после загрузки страницы
+        document.addEventListener('DOMContentLoaded', () => {
+            document.querySelectorAll('.score-display').forEach(el => {
+                const score = parseInt(el.getAttribute('data-score'));
+                if (score >= 9) {
+                    el.style.color = 'green';
+                } else if (score >= 7) {
+                    el.style.color = 'orange';
+                } else {
+                    el.style.color = 'red';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

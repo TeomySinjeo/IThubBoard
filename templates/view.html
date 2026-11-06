@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ announcement.title }}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .view-container { max-width: 800px; margin: 40px auto; background: white; padding: 40px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .view-meta { color: #888; margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+        .view-content { font-size: 1.1rem; line-height: 1.8; margin-bottom: 30px; }
+        .contact-box { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #6c5ce7; }
+        .deleted-alert { background: #ffeaea; border: 1px solid #ff7675; color: #d63031; padding: 20px; border-radius: 8px; text-align: center; margin-bottom: 20px; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="view-container">
+        <a href="/" style="text-decoration: none; color: #6c5ce7; font-weight: bold;">← Назад к ленте</a>
+        
+        {% if announcement.is_deleted %}
+        <div class="deleted-alert" style="margin-top: 20px;">
+            🚫 Данное объявление было удалено модератором.<br>
+            <span style="font-weight: normal; font-size: 0.9rem;">Причина: {{ announcement.delete_reason }}</span>
+        </div>
+        {% endif %}
+
+        <h1 style="margin: 20px 0 10px 0;">{{ announcement.title }}</h1>
+        <div class="view-meta">
+            Категория: <span class="badge" style="background:#e0e0ff; padding: 3px 8px; border-radius: 10px; color:#6c5ce7;">{{ announcement.category }}</span> 
+            | Дата: {{ announcement.created_at }} 
+            | Автор: {{ announcement.author_name }}
+        </div>
+        <div class="view-content">
+            {{ announcement.body }}
+        </div>
+        <div class="contact-box">
+            <strong>Контакт для связи:</strong> {{ announcement.contact or 'Не указан' }}
+        </div>
+    </div>
+</body>
+</html>

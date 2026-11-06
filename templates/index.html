@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IThubBoard — Доска объявлений</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        /* Стили для всплывающего уведомления (Toast) */
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: #00b894;
+            color: white;
+            padding: 15px 25px;
+            border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            font-weight: bold;
+            z-index: 1000;
+            animation: slideIn 0.3s ease-out;
+        }
+        @keyframes slideIn {
+            from { transform: translateX(100%); opacity: 0; }
+            to { transform: translateX(0); opacity: 1; }
+        }
+        .hidden { display: none; }
+    </style>
+</head>
+<body>
+    <!-- Уведомление об успехе -->
+    {% if request.args.get('success') %}
+    <div id="toast" class="toast">✅ Объявление успешно опубликовано!</div>
+    {% endif %}
+
+    <header>
+        <div class="header-content">
+            <h1>IThubBoard</h1>
+            <div>
+                <a href="{{ url_for('admin') }}" style="margin-right: 15px; color: #888; text-decoration: none; font-size: 0.9rem;">⚙️ Админ</a>
+                <a href="/create" class="btn">+ Создать объявление</a>
+            </div>
+        </div>
+        
+        <form method="GET" action="/" class="search-form">
+            <input type="text" name="q" placeholder="Поиск по объявлениям..." value="{{ search_query }}">
+            <select name="category">
+                <option value="">Все категории</option>
+                <option value="Мероприятие" {% if category_filter == 'Мероприятие' %}selected{% endif %}>Мероприятие</option>
+                <option value="Учеба" {% if category_filter == 'Учеба' %}selected{% endif %}>Учеба</option>
+                <option value="Вещи" {% if category_filter == 'Вещи' %}selected{% endif %}>Вещи</option>
+                <option value="Другое" {% if category_filter == 'Другое' %}selected{% endif %}>Другое</option>
+            </select>
+            <button type="submit" class="btn btn-search">Найти</button>
+            {% if search_query or category_filter %}
+                <a href="/" class="btn btn-clear">Сбросить</a>
+            {% endif %}
+        </form>
+    </header>
+
+    <main class="grid-container">
+        {% for a in announcements %}
+        <div class="card">
+            <div class="card-header">
+                <span class="badge">{{ a.category }}</span>
+                <span class="date">{{ a.created_at[:10] }}</span>
+            </div>
+            <h2><a href="/announcement/{{ a.id }}">{{ a.title }}</a></h2>
+            <p class="preview">{{ a.body[:150] }}{% if a.body|length > 150 %}...{% endif %}</p>
+            <div class="card-footer">
+                <span class="author">👤 {{ a.author_name }}</span>
+                <a href="/announcement/{{ a.id }}" class="read-more">Читать →</a>
+            </div>
+        </div>
+        {% else %}
+        <div class="empty-state">
+            <h3>Объявлений не найдено...</h3>
+            <p>Попробуйте изменить запрос или станьте первым, кто создаст объявление!</p>
+        </div>
+        {% endfor %}
+    </main>
+
+    <!-- Кнопка "Показать ещё" -->
+    {% if has_more %}
+    <div style="text-align: center; margin-bottom: 40px;">
+        <a href="/?page={{ page + 1 }}&q={{ search_query }}&category={{ category_filter }}" class="btn" style="background: #6c5ce7;">Показать ещё ↓</a>
+    </div>
+    {% endif %}
+
+    <script>
+        // Скрываем уведомление через 3 секунды
+        setTimeout(() => {
+            const toast = document.getElementById('toast');
+            if (toast) toast.style.display = 'none';
+        }, 3000);
+    </script>
+
+        <!-- Модальное окно опроса -->
+    <div id="surveyModal" class="modal">
+        <div class="modal-content">
+            <h2>Пожалуйста, оцените IThubBoard</h2>
+            <p style="color: #666; margin-bottom: 15px;">Порекомендуете ли вы наше приложение друзьям и коллегам?</p>
+            
+            <div class="survey-scale" id="scale">
+                <!-- Кнопки от 1 до 10 будут добавлены через JS -->
+            </div>
+
+            <div id="commentStep" style="display: none; margin-top: 20px;">
+                <p style="margin-bottom: 10px;">Почему вы поставили такую оценку? (Качественный фидбек)</p>
+                <textarea id="feedbackComment" rows="3" style="width: 100%; padding: 10px; border-radius: 8px; border: 1px solid #ccc;" placeholder="Ваш отзыв..."></textarea>
+                <button onclick="submitFeedback()" class="btn" style="margin-top: 15px; width: 100%;">Отправить отзыв</button>
+            </div>
+            
+            <button onclick="closeSurvey()" style="background: none; border: none; color: #888; margin-top: 15px; cursor: pointer; text-decoration: underline;">Закрыть</button>
+        </div>
+    </div>
+
+    <style>
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); justify-content: center; align-items: center; z-index: 1000; }
+        .modal-content { background: white; padding: 30px; border-radius: 12px; width: 450px; max-width: 90%; text-align: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); }
+        .survey-scale { display: flex; gap: 5px; justify-content: center; flex-wrap: wrap; margin-top: 20px; }
+        .scale-btn { width: 35px; height: 35px; border-radius: 50%; border: 1px solid #ccc; background: white; cursor: pointer; font-weight: bold; }
+        .scale-btn:hover { background: #e0e0ff; }
+        .scale-btn.selected { background: #6c5ce7; color: white; border-color: #6c5ce7; }
+    </style>
+
+    <script>
+        // Логика показа окна (30% шанс)
+        window.onload = function() {
+            // Проверяем, не показывали ли мы опрос в этой сессии
+            if (!sessionStorage.getItem('surveyShown')) {
+                // 30% шанс показать
+                if (Math.random() < 0.3) {
+                    setTimeout(() => {
+                        openSurvey();
+                        sessionStorage.setItem('surveyShown', 'true');
+                    }, 2000); // Покажется через 2 секунды после загрузки
+                }
+            }
+        };
+
+        let selectedScore = null;
+
+        function openSurvey() {
+            const modal = document.getElementById('surveyModal');
+            modal.style.display = 'flex';
+            const scale = document.getElementById('scale');
+            scale.innerHTML = '';
+            
+            // Генерируем кнопки от 1 до 10
+            for (let i = 1; i <= 10; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'scale-btn';
+                btn.innerText = i;
+                btn.onclick = () => selectScore(i, btn);
+                scale.appendChild(btn);
+            }
+        }
+
+        function closeSurvey() {
+            document.getElementById('surveyModal').style.display = 'none';
+        }
+
+        function selectScore(score, btn) {
+            selectedScore = score;
+            // Визуально выделяем выбранную кнопку
+            document.querySelectorAll('.scale-btn').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            
+            // Показываем поле для комментария
+            document.getElementById('commentStep').style.display = 'block';
+            
+            // Если оценка высокая, можно изменить текст (опционально)
+            if (score >= 9) {
+                document.querySelector('#commentStep p').innerText = 'Спасибо за высокую оценку! Чем мы можем стать еще лучше?';
+            } else if (score <= 6) {
+                document.querySelector('#commentStep p').innerText = 'Очень жаль. Что мы можем сделать, чтобы исправить ситуацию?';
+            } else {
+                document.querySelector('#commentStep p').innerText = 'Что мы можем улучшить, чтобы вы поставили выше?';
+            }
+        }
+
+        function submitFeedback() {
+            const comment = document.getElementById('feedbackComment').value;
+            
+            fetch('/submit_feedback', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: `score=${selectedScore}&comment=${encodeURIComponent(comment)}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.status === 'success') {
+                    closeSurvey();
+                    // Показываем простое уведомление об успехе
+                    alert('Спасибо! Ваш отзыв отправлен.');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

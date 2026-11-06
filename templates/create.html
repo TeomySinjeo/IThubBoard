@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Создать объявление</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <style>
+        .form-container { max-width: 600px; margin: 40px auto; background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.05); }
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; }
+        .form-group input, .form-group textarea, .form-group select { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 8px; font-size: 1rem; font-family: inherit; }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #6c5ce7; }
+        .actions { display: flex; gap: 10px; margin-top: 30px; }
+        .btn-cancel { background: #dfe6e9; color: #333; text-align: center; text-decoration: none; padding: 10px 20px; border-radius: 8px; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <h1 style="margin-bottom: 20px; color: #6c5ce7;">Новое объявление</h1>
+        <form method="POST">
+            <div class="form-group">
+                <label>Заголовок (до 100 симв.):</label>
+                <input type="text" name="title" maxlength="100" required placeholder="Например: Ищу команду на хакатон">
+            </div>
+            <div class="form-group">
+                <label>Категория:</label>
+                <select name="category">
+                    <option value="Событие">Событие</option>
+                    <option value="Учеба">Учеба</option>
+                    <option value="Вещи">Вещи</option>
+                    <option value="Другое">Другое</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Текст (до 1000 симв.):</label>
+                <textarea name="body" maxlength="1000" rows="5" required placeholder="Опишите подробности..."></textarea>
+            </div>
+            <div class="form-group">
+                <label>Контакт (необязательно):</label>
+                <input type="text" name="contact" placeholder="Telegram, телефон или почта">
+            </div>
+            <div class="form-group">
+                <label>Ваше имя:</label>
+                <input type="text" name="author_name" placeholder="Имя или никнейм">
+            </div>
+            <div class="actions">
+                <button type="submit" class="btn">Опубликовать</button>
+                <a href="/" class="btn-cancel">Отмена</a>
+            </div>
+        </form>
+    </div>
+</body>
+</html>
