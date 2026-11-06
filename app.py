@@ -123,16 +123,25 @@ def view(id):
     return render_template('view.html', announcement=announcement)
 
 # --- АДМИН ПАНЕЛЬ ---
-@app.route('/admin')
+@app.route('/admin', methods=['GET', 'POST'])
 def admin():
+    if request.method == 'POST':
+        password = request.form.get('password')
+        if password == ADMIN_PASSWORD:
+            session['is_admin'] = True
+            return redirect(url_for('admin'))
+        else:
+            return render_template('admin.html', error="Неверный пароль!")
+
     if not session.get('is_admin'):
         return render_template('admin.html', is_auth=False)
 
+    # Если админ авторизован - показываем все объявления и отзывы
     conn = get_db_connection()
     announcements = conn.execute('SELECT * FROM announcements ORDER BY created_at DESC').fetchall()
-    # Получаем отзывы
     feedbacks = conn.execute('SELECT * FROM feedbacks ORDER BY created_at DESC').fetchall()
     conn.close()
+    
     return render_template('admin.html', is_auth=True, announcements=announcements, feedbacks=feedbacks)
 
 @app.route('/admin/delete/<int:id>', methods=['POST'])
