@@ -9,9 +9,12 @@ app.secret_key = 'super_secret_key_ithubb' # Нужно для работы се
 ADMIN_PASSWORD = "admin123" # Пароль для админа (можете поменять)
 
 def get_db_connection():
-    conn = sqlite3.connect('ithubb.db')
-    conn.row_factory = sqlite3.Row
-    return conn
+    # Если папка /data существует (на хостинге) — используем её
+    if os.path.exists('/data'):
+        db_path = '/data/ithubb.db'
+    else:
+        db_path = 'ithubb.db'
+    conn = sqlite3.connect(db_path)
 
 def init_db():
     conn = get_db_connection()
